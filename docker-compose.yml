@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio-sftp
+    restart: always
+    ports:
+      - "9008:9008"     # S3 API endpoint
+      - "9098:9098"     # Console
+      - "2222:8022"     # SFTP port
+    env_file:
+      - ./.env
+    volumes:
+      - ./minio-data:/data
+      - ./sshkeys/id_rsa:/root/.ssh/id_rsa:ro
+      - ./scripts:/scripts
+    command: >
+      server /data
+      --address ":9008"
+      --console-address ":9098"
+      --ftp="address=:8021"
+      --ftp="passive-port-range=30000-30010"
+      --sftp="address=:8022"
+      --sftp="ssh-private-key=/root/.ssh/id_rsa"
+      --sftp="password-authentication=on"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9008/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
